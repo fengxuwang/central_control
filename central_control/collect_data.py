@@ -5,12 +5,26 @@ import requests
 
 from central_control.db import DBUtil
 
+local_db = {
+    "host": "localhost",
+    "user": "wdyk",
+    "password": "Wdyk@123",
+    "database": "pub_env"
+}
+
+remote_db = {
+    "host": "39.96.8.100",
+    "user": "51banshou",
+    "password": "U2FsdGVkX1+",
+    "database": "pub_env"
+}
+
 
 def collect():
     is_connection = check()
     if is_connection:
         try:
-            dbUtil = DBUtil(host='39.96.38.182', user='root', password='Wdyk@2018', database='pub_env')
+            dbUtil = DBUtil(host=local_db.get("host"), user=local_db.get("user"), password=local_db.get("password"), database=local_db.get("database"))
             # 获取最近一次采集的时间
             last_date_sql = "select collection_time, failure_times from collection_setting"
             last_date = dbUtil.query_one(last_date_sql)
@@ -81,7 +95,7 @@ def map_data(results):
 def check():
     # 检测是否能访问远程数据库
     try:
-        DBUtil(host='192.168.0.155', user='wdyk', password='Wdyk@123', database='pub_env')
+        DBUtil(host=remote_db.get("host"), user=remote_db.get("user"), password=remote_db.get("password"), database=remote_db.get("database"))
         return True
     except Exception as e:
         print("连接数据库失败")
@@ -91,17 +105,17 @@ def check():
 
 
 def update_error_times():
-    dbUtil = DBUtil(host='39.96.38.182', user='root', password='Wdyk@2018', database='pub_env')
+    dbUtil = DBUtil(host=local_db.get("host"), user=local_db.get("user"), password=local_db.get("password"), database=local_db.get("database"))
     sql = "update collection_setting set failure_times = ifnull(failure_times, 0) + 1 where id = 1"
     dbUtil.update(sql, None)
     dbUtil.commit()
 
 
 def push_data(collect_data):
-    remote_db = DBUtil(host='192.168.0.155', user='wdyk', password='Wdyk@123', database='pub_env')
+    remote_connect = DBUtil(host=remote_db.get("host"), user=remote_db.get("user"), password=remote_db.get("password"), database=remote_db.get("database"))
     insert_sql = "insert into T_HVAC(id, tag_node, tag_name, building_indentity, tag_value, tag_description, device_id, device_identity, device_location, device_name, device_item, plance_id, system, sub_system, device_profession, collection_time, colletion_seq, record_time, project_id) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-    remote_db.insert(insert_sql, collect_data)
-    remote_db.commit()
+    remote_connect.insert(insert_sql, collect_data)
+    remote_connect.commit()
 
 
 if __name__ == '__main__':
